@@ -1,0 +1,37 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "privatednsblobDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "dnsZoneGroupDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "dnsZoneGroupName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateDnsZoneGroupsLocation": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateDnsPurviewDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateEndpointDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateEndpointName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateEndpointLocation": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateDnsQueueDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "privateDnsServicebusDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        }
+        
+    }
+}

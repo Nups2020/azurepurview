@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "deploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "vNetLocation": {
+            "value": "eastus"
+        },
+        "provisioningStatus": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "vNetAddressPrefixes": {
+            "value": [""] // TODO: Fill in parameter value
+        },
+        "vnetName": {
+            "value": ""// TODO: Fill in parameter value
+        },
+        "subnetName": {
+            "value": ""// TODO: Fill in parameter value
+        },
+        "subnetAddressPrefix": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "ddosProtectionPlanId": {
+            "value": "",
+            "metadata": {
+                "description": "Optional. Resource Id of the DDoS protection plan to assign the VNET to. If it's left blank, DDoS protection will not be configured. If it's provided, the VNET created by this template will be attached to the referenced DDoS protection plan. The DDoS protection plan can exist in the same or in a different subscription."
+            }
+        },
+        "purviewAccountName":{
+            "value": "" // TODO: Fill in parameter value
+
+        },
+        "purviewLocation": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "blobDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "blobName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "blobLocation": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "namespaceDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "namespaceName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "namespaceLocation": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "queueDeploymentName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "queueName": {
+            "value": "" // TODO: Fill in parameter value
+        },
+        "queueLocation": {
+            "value": "" // TODO: Fill in parameter value
+        }
+        
+    }
+        
+}

@@ -1,0 +1,379 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "privatednsblobDeploymentName": {
+            "type": "string"
+        },
+        "dnsZoneGroupDeploymentName": {
+            "type": "string"
+        },
+        "dnsZoneGroupName": {
+            "type": "string"
+        },
+        "privateDnsZoneGroupsLocation": {
+            "type": "string"
+        },
+        "privateDnsPurviewDeploymentName": {
+            "type": "string"
+        },
+        "privateEndpointDeploymentName": {
+            "type": "string"
+        },
+        "privateEndpointName": {
+            "type": "String"
+        },
+        "privateEndpointLocation": {
+            "type": "string"
+        },
+        "privateDnsQueueDeploymentName": {
+            "type": "string"
+        },
+        "privateDnsServicebusDeploymentName": {
+            "type": "string"
+        }
+
+    },
+    "variables": {
+        "blobPublicDNSZoneForwarder": "[concat('.blob.', environment().suffixes.storage)]",
+        "blobPrivateDnsZoneName": "[concat('privatelink', variables('blobPublicDNSZoneForwarder'))]",
+        "blobPrivateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('blobPrivateDnsZoneName'))]"
+        
+    },
+    "resources": [
+    {
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2017-05-10",
+    "name": "[parameters('privateEndpointDeploymentName')]",
+    "dependsOn": [
+        "[parameters('purviewAccountName')]"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "parameters": {},
+        "template": {
+            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {},
+            "variables": {},
+            "resources": [
+                {
+                    "apiVersion": "2020-03-01",
+                    "name": "[parameters('privateEndpointName')]",
+                    "type": "Microsoft.Network/privateEndpoints",
+                    "location": "[parameters('privateEndpointLocation')]",
+                    "properties": {
+                        "privateLinkServiceConnections": [
+                            {
+                                "name": "[parameters('privateEndpointName')]",
+                                "properties": {
+                                    "privateLinkServiceId": "[concat(resourceGroup().id, '/providers/Microsoft.Purview/accounts/', parameters('purviewAccountName'))]",
+                                    "groupIds": [
+                                        "account"
+                                    ]
+                                }
+                            }
+                        ],
+                        "subnet": {
+                            "id": "[variables('subnetId')]"
+                        }
+                    },
+                    "tags": {}
+                }
+            ],
+            "outputs": {}
+        }
+    },
+    "resources": []
+    
+},
+{
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2017-05-10",
+    "name": "[parameters('privateDnsPurviewDeploymentName')]",
+    "dependsOn": [
+        "privateEndpointDeploymentName"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "template": {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "resources": [
+                {
+                    "type": "Microsoft.Network/privateDnsZones",
+                    "apiVersion": "2018-09-01",
+                    "name": "privatelink.purview.azure.com",
+                    "location": "global",
+                    "tags": {},
+                    "properties": {}
+                },
+                {
+                    "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+                    "apiVersion": "2018-09-01",
+                    "name": "[concat('privatelink.purview.azure.com', '/', uniqueString(variables('vnetId')))]",
+                    "location": "global",
+                    "dependsOn": [
+                        "privatelink.purview.azure.com"
+                    ],
+                    "properties": {
+                        "virtualNetwork": {
+                            "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+                        },
+                        "registrationEnabled": false
+                    }
+                },
+                {
+                    "apiVersion": "2017-05-10",
+                    "name": "[parameters('dnsZoneGroupDeploymentName')]",
+                    "type": "Microsoft.Resources/deployments",
+                    "dependsOn": [
+                        "privatelink.purview.azure.com"
+                    ],
+                    "properties": {
+                        "mode": "Incremental",
+                        "template": {
+                            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                            "contentVersion": "1.0.0.0",
+                            "resources": [
+                                {
+                                    "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+                                    "apiVersion": "2020-03-01",
+                                    "name": "[concat('privateEndpointName', '/', 'default')]",
+                                    "location": "[parameters('privateEndpointLocation')]",
+                                    "properties": {
+                                        "privateDnsZoneConfigs": [
+                                            {
+                                                "name": "privatelink-purview-azure-com",
+                                                "properties": {
+                                                    "privateDnsZoneId": "[concat(resourceGroup().id, '/providers/Microsoft.Network/privateDnsZones/privatelink.purview.azure.com')]"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+  },
+  {
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2017-05-10",
+    "name": "[parameters('privateDnsQueueDeploymentName')]",
+    "dependsOn": [
+        "[parameters('queueDeploymentName')]"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "template": {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "resources": [
+                {
+                    "type": "Microsoft.Network/privateDnsZones",
+                    "apiVersion": "2018-09-01",
+                    "name": "privatelink.queue.core.windows.net",
+                    "location": "global",
+                    "tags": {},
+                    "properties": {}
+                },
+                {
+                    "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+                    "apiVersion": "2018-09-01",
+                    "name": "[concat('privatelink.queue.core.windows.net', '/', uniqueString(variables('vnetId')))]",
+                    "location": "global",
+                    "dependsOn": [
+                        "privatelink.queue.core.windows.net"
+                    ],
+                    "properties": {
+                        "virtualNetwork": {
+                            "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+                        },
+                        "registrationEnabled": false
+                    }
+                },
+                {
+                    "apiVersion": "2017-05-10",
+                    "name": "[parameters('dnsZoneGroupName')]",
+                    "type": "Microsoft.Resources/deployments",
+                    "dependsOn": [
+                        "privatelink.queue.core.windows.net"
+                    ],
+                    "properties": {
+                        "mode": "Incremental",
+                        "template": {
+                            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                            "contentVersion": "1.0.0.0",
+                            "resources": [
+                                {
+                                    "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+                                    "apiVersion": "2020-03-01",
+                                    "name": "[concat('queueName', '/', 'default')]",
+                                    "location": "[parameters('privateDnsZoneGroupsLocation')]",
+                                    "properties": {
+                                        "privateDnsZoneConfigs": [
+                                            {
+                                                "name": "privatelink-queue-core-windows-net",
+                                                "properties": {
+                                                    "privateDnsZoneId": "[concat(resourceGroup().id, '/providers/Microsoft.Network/privateDnsZones/privatelink.purview.azure.com')]"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+   
+},
+{
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2017-05-10",
+    "name": "[parameters('privateDnsServicebusDeploymentName')]",
+    "dependsOn": [
+        "[parameters('namespaceDeploymentName')]"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "template": {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "resources": [
+                {
+                    "type": "Microsoft.Network/privateDnsZones",
+                    "apiVersion": "2018-09-01",
+                    "name": "privatelink.servicebus.windows.net",
+                    "location": "global",
+                    "tags": {},
+                    "properties": {}
+                },
+                {
+                    "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+                    "apiVersion": "2018-09-01",
+                    "name": "[concat('privatelink.servicebus.windows.net', '/', uniqueString(variables('vnetId')))]",
+                    "location": "global",
+                    "dependsOn": [
+                        "privatelink.servicebus.windows.net"
+                    ],
+                    "properties": {
+                        "virtualNetwork": {
+                            "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+                        },
+                        "registrationEnabled": false
+                    }
+                },
+                {
+                    "apiVersion": "2017-05-10",
+                    "name": "[parameters('dnsZoneGroupDeploymentName')]",
+                    "type": "Microsoft.Resources/deployments",
+                    "resourceGroup": "[concat(resourceGroup().id)]",
+                    "subscriptionId": "70f85469-9e42-4c67-8eae-407d53cd0f43",
+                    "dependsOn": [
+                        "privatelink.servicebus.windows.net"
+                    ],
+                    "properties": {
+                        "mode": "Incremental",
+                        "template": {
+                            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                            "contentVersion": "1.0.0.0",
+                            "resources": [
+                                {
+                                    "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+                                    "apiVersion": "2020-03-01",
+                                    "name": "[concat('namespaceName', '/', 'default')]",
+                                    "location": "[parameters('privateDnsZoneGroupsLocation')]",
+                                    "properties": {
+                                        "privateDnsZoneConfigs": [
+                                            {
+                                                "name": "privatelink-servicebus-windows-net",
+                                                "properties": {
+                                                    "privateDnsZoneId": "[concat(resourceGroup().id, '/providers/Microsoft.Network/privateDnsZones/privatelink.purview.azure.com')]"
+
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+},
+{
+    "type": "Microsoft.Resources/deployments",
+    "apiVersion": "2017-05-10",
+    "name": "[parameters('privatednsblobDeploymentName')]",
+    "dependsOn": [
+        "[parameters('blobDeploymentName')]"
+    ],
+    "properties": {
+        "mode": "Incremental",
+        "template": {
+            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "resources": [
+                {
+                    "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+                    "apiVersion": "2018-09-01",
+                    "name": "[concat('privatelink.blob.core.windows.net', '/', uniqueString(variables('vnetId')))]",
+                    "location": "global",
+                    "dependsOn": [],
+                    "properties": {
+                        "virtualNetwork": {
+                            "id": "[concat(resourceGroup().id, '/providers/Microsoft.Network/virtualNetworks/', parameters('vnetName'))]"
+                        },
+                        "registrationEnabled": false
+                    }
+                },
+                {
+                    "apiVersion": "2017-05-10",
+                    "name": "[parameters('dnsZoneGroupName')]",
+                    "type": "Microsoft.Resources/deployments",
+                    "resourceGroup": "[concat(resourceGroup().id)]",
+                    "subscriptionId": "70f85469-9e42-4c67-8eae-407d53cd0f43",
+                    "dependsOn": [],
+                    "properties": {
+                        "mode": "Incremental",
+                        "template": {
+                            "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                            "contentVersion": "1.0.0.0",
+                            "resources": [
+                                {
+                                    "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+                                    "apiVersion": "2020-03-01",
+                                    "name": "[concat('blobName', '/', 'default')]",
+                                    "location": "[parameters('privateDnsZoneGroupsLocation')]",
+                                    "properties": {
+                                        "privateDnsZoneConfigs": [
+                                            {
+                                                "name": "privatelink-blob-core-windows-net",
+                                                "properties": {
+                                                    "privateDnsZoneId": "[variables('blobPrivateDnsZoneId')]"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+   
+}
+ ],
+    "outputs": {}
+}

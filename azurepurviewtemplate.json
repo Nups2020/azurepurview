@@ -1,0 +1,286 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "deploymentName": {
+            "type": "String"
+        },
+        "vNetLocation": {
+            "type": "String"
+        },
+        "provisioningStatus": {
+            "type": "string"
+        },
+        "vNetAddressPrefixes": {
+            "type": "array"
+        },
+         "vnetName": {
+            "type": "String"
+        },
+        "subnetName": {
+            "type": "String"
+        },
+        "subnetAddressPrefix": {
+            "type": "String"
+        },
+        "ddosProtectionPlanId": {
+            "type": "string"
+        },
+        "purviewAccountName": {
+            "type": "String"
+        },
+        "purviewLocation": {
+            "type": "string"
+        },
+        "blobDeploymentName": {
+            "type": "string"
+        },
+        "blobName": {
+            "type": "string"
+        },
+        "blobLocation": {
+            "type": "string"
+        },
+        "namespaceDeploymentName": {
+            "type": "string"
+        },
+        "namespaceName": {
+            "type": "string"
+        },
+        "namespaceLocation": {
+            "type": "string"
+        },
+        "queueDeploymentName": {
+            "type": "string"
+        },
+        "queueName": {
+            "type": "string"
+        },
+        "queueLocation": {
+            "type": "string"
+        }
+        
+
+    },
+    "variables": {
+        "vnetId": "[concat(resourceGroup().id, '/providers/Microsoft.Network/virtualNetworks/', parameters('vnetName'))]",
+        "subnetId": "[concat(variables('VnetId'), '/subnets/', parameters('subnetName'))]",
+        "ddosProtectionPlan": {
+            "id": "[parameters('ddosProtectionPlanId')]"
+        }
+       
+        
+        
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[parameters('deploymentName')]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2019-04-01",
+                            "name": "[parameters('vNetName')]",
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "location": "[parameters('vNetLocation')]",
+                            "properties": {
+                                "provisioningState": "[parameters('provisioningStatus')]",
+                                "resourceGuid": "81eb5c04-3f51-402e-8d87-be34a4d81b12",
+                                "addressSpace": {
+                                    "addressPrefixes": "[parameters('vNetAddressPrefixes')]"                            
+                                },
+                                "subnets": [
+                                    {
+                                        "name": "[parameters('subnetName')]",
+                                        "id": "[variables('subnetId')]",
+                                        "etag": "W/\"0cbe266a-ced1-4df6-b09c-da050c97e3f1\"",
+                                        "properties": {
+                                            "provisioningState": "[parameters('provisioningStatus')]",
+                                            "addressPrefix": "[parameters('subnetAddressPrefix')]",
+                                            "delegations": [],
+                                            "privateEndpointNetworkPolicies": "Disabled",
+                                            "privateLinkServiceNetworkPolicies": "Enabled"
+                                        },
+                                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                                    }
+                                ],
+                                "virtualNetworkPeerings": [],
+                                "ddosProtectionPlan": "[if(not(empty(parameters('ddosProtectionPlanId'))), variables('ddosProtectionPlan'), json('null'))]",
+                                "enableDdosProtection": "[not(empty(parameters('ddosProtectionPlanId')))]"
+                            },
+                            "tags": {}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "resources": []
+            
+        },
+        
+        {
+            "type": "Microsoft.Purview/accounts",
+            "apiVersion": "2020-12-01-preview",
+            "name": "[parameters('purviewAccountName')]",
+            "location": "[parameters('purviewLocation')]",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/', parameters('deploymentName'))]"
+            ],
+            "tags": {},
+            "sku": {
+                "name": "Standard",
+                "capacity": 4
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "publicNetworkAccess": "Disabled"
+            }
+        },
+        
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[parameters('blobDeploymentName')]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2020-03-01",
+                            "name": "[parameters('blobName')]",
+                            "type": "Microsoft.Network/privateEndpoints",
+                            "location": "[parameters('blobLocation')]",
+                            "properties": {
+                                "privateLinkServiceConnections": [
+                                    {
+                                        "name": "[parameters('blobName')]",
+                                        "properties": {
+                                            "privateLinkServiceId": "[reference('deploymentName').managedResources.storageAccount]",
+                                            "groupIds": [
+                                                "blob"
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "subnet": {
+                                    "id": "[variables('subnetId')]"
+                                }
+                            },
+                            "tags": {}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "resources": []
+           
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[parameters('queueDeploymentName')]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2020-03-01",
+                            "name": "[parameters('queueName')]",
+                            "type": "Microsoft.Network/privateEndpoints",
+                            "location": "[parameters('queueLocation')]",
+                            "properties": {
+                                "privateLinkServiceConnections": [
+                                    {
+                                        "name": "[parameters('queueName')]",
+                                        "properties": {
+                                            "privateLinkServiceId": "[reference('deploymentName').managedResources.storageAccount]",
+                                            "groupIds": [
+                                                "queue"
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "subnet": {
+                                    "id": "[variables('subnetId')]"
+                                }
+                            },
+                            "tags": {}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "resources": []
+            
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "name": "[parameters('namespaceDeploymentName')]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "parameters": {},
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2020-03-01",
+                            "name": "[parameters('namespaceName')]",
+                            "type": "Microsoft.Network/privateEndpoints",
+                            "location": "[parameters('namespaceLocation')]",
+                            "properties": {
+                                "privateLinkServiceConnections": [
+                                    {
+                                        "name": "[parameters('namespaceName')]",
+                                        "properties": {
+                                            "privateLinkServiceId": "[reference('deploymentName').managedResources.eventHubNamespace]",
+                                            "groupIds": [
+                                                "namespace"
+                                            ]
+                                        }
+                                    }
+                                ],
+                                "subnet": {
+                                    "id": "[variables('subnetId')]"
+                                }
+                            },
+                            "tags": {}
+                        }
+                    ],
+                    "outputs": {}
+                }
+            },
+            "resources": []
+           
+        }
+       
+    ],
+    "outputs": {}
+}
